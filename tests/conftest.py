@@ -18,6 +18,7 @@ changes that path.
 
 import asyncio
 import base64
+import os
 from collections.abc import Iterator
 from unittest.mock import AsyncMock, patch
 
@@ -35,6 +36,29 @@ TEST_HMAC_SECRET = "test-hmac-secret-not-for-production"
 
 # Points at a port nothing listens on, to prove no connection is attempted.
 UNREACHABLE_MONGO_URI = "mongodb://127.0.0.1:59999"
+
+
+@pytest.fixture(scope="session", autouse=True)
+def isolate_settings_from_the_environment() -> Iterator[None]:
+    """Keep a developer's local ``.env`` and shell exports out of the tests.
+
+    Without this, running the API locally is enough to break the test suite:
+    a real ``UNHP_JWT_SECRET`` in ``.env`` makes the placeholder-secret guard
+    tests pass their check and fail their assertion. Tests must describe the
+    code, not whatever happens to be configured on one machine.
+    """
+    original_env_file = Settings.model_config.get("env_file")
+    Settings.model_config["env_file"] = None
+
+    overridden = {key: value for key, value in os.environ.items() if key.startswith("UNHP_")}
+    for key in overridden:
+        del os.environ[key]
+
+    try:
+        yield
+    finally:
+        Settings.model_config["env_file"] = original_env_file
+        os.environ.update(overridden)
 
 
 @pytest.fixture(scope="session", autouse=True)

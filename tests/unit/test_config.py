@@ -79,12 +79,25 @@ class TestPlaceholderSecretGuard:
                 national_id_encryption_key=VALID_KEY,  # type: ignore[arg-type]
             )
 
+    @pytest.mark.parametrize("environment", [Environment.STAGING, Environment.PRODUCTION])
+    def test_deployed_environments_reject_placeholder_jwt_secret(
+        self, environment: Environment
+    ) -> None:
+        """A placeholder signing secret would make every access token forgeable."""
+        with pytest.raises(ValidationError, match="placeholder"):
+            Settings(
+                environment=environment,
+                national_id_encryption_key=VALID_KEY,  # type: ignore[arg-type]
+                national_id_hmac_secret="a-real-production-secret",  # type: ignore[arg-type]
+            )
+
     def test_production_with_real_secrets_is_accepted(self) -> None:
         """A properly configured production environment passes."""
         settings = Settings(
             environment=Environment.PRODUCTION,
             national_id_encryption_key=VALID_KEY,  # type: ignore[arg-type]
             national_id_hmac_secret="a-real-production-secret",  # type: ignore[arg-type]
+            jwt_secret="a-real-production-signing-secret",  # type: ignore[arg-type]
         )
         assert settings.is_production is True
 
