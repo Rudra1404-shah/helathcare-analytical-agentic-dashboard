@@ -5,15 +5,18 @@ arrives on a citizen registration form, a staff intake form, or a doctor
 onboarding form.
 """
 
-from typing import Annotated
+from decimal import Decimal
+from typing import Annotated, Any
 
-from pydantic import Field, StringConstraints
+from bson.decimal128 import Decimal128
+from pydantic import BeforeValidator, Field, StringConstraints
 
 __all__ = [
     "ARGON2_HASH_PREFIX",
     "Icd10Code",
     "LicenseNumber",
     "MedicalRecordNumber",
+    "Money",
     "NonEmptyStr",
     "PersonName",
     "PhoneNumber",
@@ -24,6 +27,24 @@ __all__ = [
 
 ARGON2_HASH_PREFIX = "$argon2"
 """Every Argon2 encoded hash begins with this marker."""
+
+
+def _decimal_from_bson(value: Any) -> Any:
+    """Accept the BSON Decimal128 MongoDB hands back for a stored Decimal.
+
+    Beanie serialises a Python Decimal into BSON Decimal128, but Pydantic
+    refuses to validate that type on the way back, so a stored invoice could be
+    written and never read again. Converting here keeps money exact end to end --
+    the alternative, float, is what turns a rounding drift into an
+    Overcharging complaint.
+    """
+    if isinstance(value, Decimal128):
+        return value.to_decimal()
+    return value
+
+
+Money = Annotated[Decimal, BeforeValidator(_decimal_from_bson)]
+"""An exact monetary amount that survives a MongoDB round trip."""
 
 NonEmptyStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 

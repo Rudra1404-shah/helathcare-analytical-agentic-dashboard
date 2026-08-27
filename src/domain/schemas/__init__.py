@@ -67,6 +67,7 @@ from src.domain.schemas.hospital import (
     HospitalResponse,
 )
 from src.domain.schemas.inventory import (
+    CapacitySummaryResponse,
     InventoryItemCreateRequest,
     InventoryItemResponse,
     InventoryItemUpdateRequest,
@@ -111,6 +112,7 @@ __all__ = [
     "BillResponse",
     "BulkUploadReport",
     "BulkUploadRowError",
+    "CapacitySummaryResponse",
     "CaseAdmissionRequest",
     "CaseDischargeRequest",
     "CaseStatusUpdateRequest",

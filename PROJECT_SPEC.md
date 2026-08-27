@@ -1,7 +1,8 @@
 # Unified National Health Platform — Project Specification
 
-**Status:** Phase 1 complete (data foundation)
+**Status:** Phase 2 complete (HTTP API and three-portal dashboard)
 **Stack:** FastAPI · MongoDB · Beanie 2.2 ODM · PyMongo async · Pydantic v2 · Python 3.11
+**Frontend:** Next.js 16 App Router · Tailwind v4 · shadcn/ui idiom · Lucide · Geist
 
 ---
 
@@ -156,21 +157,36 @@ numbers and complaint numbers are unique platform-wide.
 
 ```
 src/
-  main.py                    FastAPI app factory + lifespan
+  main.py                    App factory, CORS, exception handlers, /uploads mount
   core/
     config.py                pydantic-settings; UNHP_ prefix; placeholder-secret guard
     security.py              Argon2 passwords; AES-GCM + HMAC National IDs
+    tokens.py                JWT issue and verify; signed role and hospital claims
+    errors.py                DomainError hierarchy carrying its own HTTP status
+    audit.py                 Structured audit events on the unhp.audit logger
   infrastructure/
     database.py              THE ONLY module that touches the MongoDB driver
   domain/
     enums.py                 Every controlled vocabulary
-    types.py                 Reusable constrained field types
+    types.py                 Reusable constrained field types, including Money
     models/                  12 Beanie documents + value objects
     schemas/                 Pydantic v2 request/response per form
+  services/                  15 modules: the business rules, framework-free
+  api/
+    deps.py                  Auth, role guards, hospital-scope guard, paging
+    errors.py                Every failure normalised into the response envelope
+    v1/                      14 routers, 76 routes
+scripts/
+  seed.py                    Synthetic demonstration data
 tests/
-  conftest.py                DB-free Beanie bootstrap
+  conftest.py                DB-free Beanie bootstrap for unit tests
   factories.py               Valid-by-default builders (synthetic data only)
-  unit/                      412 tests
+  unit/                      414 tests, no database required
+  integration/               91 tests against a live MongoDB
+frontend/
+  app/                       Three role-gated portals, App Router
+  components/                Shell, UI primitives, domain components
+  lib/                       Typed API client, session, formatting
 ```
 
 ### A note on the driver
@@ -233,34 +249,83 @@ persisting.
 
 ## 6. Phase Status
 
-### Phase 1 — Complete
+### Phase 1 - Complete
 
 - 12 Beanie document models + value objects
-- 14 Pydantic v2 schema modules (65 exported symbols)
+- 14 Pydantic v2 schema modules
 - FastAPI app factory, lifespan, health endpoints
 - 412 unit tests, 95% coverage, `mypy --strict` clean, `ruff` clean
 
-### Deferred to Phase 2
+### Phase 2 - Complete
+
+- **Service layer**, 15 modules. Framework-free: they raise `DomainError`, never
+  `HTTPException`, so the same function is callable from a router, a seed script, or a
+  scheduled job.
+- **76 routes across 14 routers**, every one returning the `ApiResponse` envelope.
+- **JWT authentication** with five-role authorisation. Tokens are re-checked against the
+  stored account on every request, so deactivating a user takes effect immediately rather
+  than at token expiry.
+- **Hospital-scope isolation** enforced twice: in the path dependency and again inside
+  every service, so a caller that bypasses the router still cannot read across hospitals.
+- **`.xlsx`/`.csv` bulk parser** reading every cell as raw text.
+- **Evidence storage** on local disk behind one interface, so an S3 or GridFS swap is
+  confined to `storage_service.py`.
+- **Audit logging** on the `unhp.audit` logger. Deliberately not a thirteenth collection:
+  an audit trail belongs in append-only infrastructure the application cannot rewrite.
+- **91 integration tests** against a live MongoDB, alongside the 414 DB-free unit tests.
+- **Three-portal dashboard** in `frontend/`, wired to the live API.
+
+### Four defects a live database found
+
+Phase 1's unit tests could not have caught any of these, because none of them appear
+until a document makes a real round trip:
+
+| Defect | Consequence had it shipped |
+|---|---|
+| Beanie stores `Decimal` as BSON `Decimal128`, which Pydantic refuses on read | Every invoice was write-only. Fixed with the `Money` type in `domain/types.py`. |
+| MongoDB returns naive datetimes | Every validator comparing a stored timestamp against `utcnow()` raised `TypeError`. Fixed with `tz_aware` clients. |
+| Services accepted a `Settings` override the routers never passed | National ID encryption silently used the process singleton. |
+| `validate_assignment` fires per field | A discharge, which must move `status` and `discharged_at` together, could not be expressed. Added `apply_atomic_update`. |
+
+### One Phase 1 model amendment
+
+`User` gained a protected `national_id` and an `address`. Citizen registration collected
+both and had nowhere to store them, and the PHR cannot unify records across hospitals
+without the National ID lookup hash. `UserResponse` is unchanged, so neither field can
+leak. Still exactly 12 collections.
+
+### Deferred beyond Phase 2
 
 | Item | Note |
 |---|---|
-| `.xlsx`/`.csv` bulk upload **parser** | Phase 1 ships the row schema + error report contract only |
-| HTTP routers and auth flows | No endpoints beyond `/health` yet |
-| DB-backed integration tests | Index and uniqueness enforcement needs a live MongoDB |
-| Evidence/document storage backend | Phase 1 stores URLs + checksums; S3 vs GridFS undecided |
-| Audit logging | Required by CLAUDE.md; belongs with the service layer |
+| Object storage for evidence | Local disk works; S3 or GridFS is a one-file change |
+| Transactional bed allocation | Needs a replica set. Writes are ordered to fail safe instead |
+| The 7-module analytics engine | Phase 4+. Every model was shaped for it |
 
 ---
 
 ## 7. Commands
 
 ```bash
-uvicorn src.main:app --reload          # start API
-pytest                                 # run tests
+# Backend
+uvicorn src.main:app --reload          # start the API on :8000
+python -m scripts.seed --reset         # synthetic demonstration data
+pytest                                 # 505 tests (unit + integration)
+pytest -m "not integration"            # unit tests only, no MongoDB needed
 pytest --cov=src --cov-report=term-missing
 mypy src/                              # strict type check
 ruff check --fix . && ruff format .    # lint + format
+
+# Frontend
+cd frontend && npm install
+npm run dev                            # dashboard on :3000
+npm run build && npm run lint
 ```
+
+Integration tests need MongoDB on `localhost:27017`. They use a throwaway `unhp_test`
+database, dropped at the start and end of the session.
+
+See `DESIGN.md` for the dashboard's design system.
 
 Copy `.env.example` to `.env` and generate real secrets before running outside development:
 

@@ -11,6 +11,7 @@ from src.domain.schemas.common import IdentifiedResponse, RequestSchema, Respons
 from src.domain.types import ShortText
 
 __all__ = [
+    "CapacitySummaryResponse",
     "InventoryItemCreateRequest",
     "InventoryItemResponse",
     "InventoryItemUpdateRequest",
@@ -108,6 +109,27 @@ class InventoryItemResponse(IdentifiedResponse):
     last_restocked_at: datetime | None = None
     expires_on: date | None = None
     is_active: bool
+
+
+class CapacitySummaryResponse(ResponseSchema):
+    """One live capacity card on the hospital overview.
+
+    A hospital can track several lines in the same category -- two ventilator
+    models, three oxygen tanks -- so a card sums the category rather than
+    reporting a single line, and says how many lines it rolled up.
+    """
+
+    category: InventoryCategory
+    total_stock: float = Field(ge=0.0)
+    available_stock: float = Field(ge=0.0)
+    in_use: float = Field(ge=0.0)
+    min_safety_threshold: float = Field(ge=0.0)
+    unit: InventoryUnit | None = Field(
+        default=None, description="None when the hospital tracks nothing in this category."
+    )
+    utilisation_ratio: float = Field(ge=0.0, le=1.0)
+    is_below_threshold: bool
+    line_count: int = Field(ge=0)
 
 
 class LowStockAlertResponse(ResponseSchema):

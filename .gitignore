@@ -31,3 +31,13 @@ logs/
 .claude/memory/
 .vscode/
 .idea/
+
+# Phase 2
+# Anchored to the repo root: an unanchored 'uploads/' also matches
+# frontend/app/api/uploads/, which silently excludes a route handler.
+/uploads/
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/tsconfig.tsbuildinfo
+frontend/.env.local

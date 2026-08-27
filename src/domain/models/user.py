@@ -9,7 +9,7 @@ from pydantic import EmailStr, Field, field_validator, model_validator
 from pymongo import IndexModel
 
 from src.domain.enums import UserRole
-from src.domain.models.base import TimestampedDocument
+from src.domain.models.base import Address, ProtectedNationalId, TimestampedDocument
 from src.domain.types import ARGON2_HASH_PREFIX, PersonName, PhoneNumber
 
 __all__ = ["HOSPITAL_SCOPED_ROLES", "User"]
@@ -37,6 +37,18 @@ class User(TimestampedDocument):
     role: UserRole = Field(description="Authorisation role.")
     full_name: PersonName
     phone: PhoneNumber | None = Field(default=None)
+    address: Address | None = Field(
+        default=None, description="Postal address, captured on citizen registration."
+    )
+
+    # --- Protected identity ------------------------------------------------ #
+    national_id: ProtectedNationalId | None = Field(
+        default=None,
+        description="Encrypted National ID plus deterministic lookup hash. "
+        "The join key that resolves a citizen account to every hospital-local "
+        "patient record created for them. Plaintext is never stored, and "
+        "UserResponse deliberately has nowhere to put it.",
+    )
 
     # --- Ownership links -------------------------------------------------- #
     hospital_id: PydanticObjectId | None = Field(
@@ -65,6 +77,11 @@ class User(TimestampedDocument):
             IndexModel(
                 [("hospital_id", pymongo.ASCENDING), ("role", pymongo.ASCENDING)],
                 name="ix_users_hospital_role",
+            ),
+            IndexModel(
+                [("national_id.lookup_hash", pymongo.ASCENDING)],
+                name="ix_users_national_id_lookup",
+                sparse=True,
             ),
         ]
 

@@ -16,7 +16,7 @@ from pymongo import IndexModel
 
 from src.domain.enums import PaymentMode, PaymentStatus
 from src.domain.models.base import TimestampedDocument, ValueObject, utcnow
-from src.domain.types import ShortText
+from src.domain.types import Money, ShortText
 
 __all__ = ["Bill", "BillLineItem", "money"]
 
@@ -33,9 +33,9 @@ class BillLineItem(ValueObject):
     """A single charge on an invoice."""
 
     description: ShortText
-    rate: Decimal = Field(ge=Decimal("0"), max_digits=MAX_MONEY_DIGITS, decimal_places=2)
-    quantity: Decimal = Field(gt=Decimal("0"), max_digits=MAX_MONEY_DIGITS, decimal_places=3)
-    total: Decimal = Field(ge=Decimal("0"), max_digits=MAX_MONEY_DIGITS, decimal_places=2)
+    rate: Money = Field(ge=Decimal("0"), max_digits=MAX_MONEY_DIGITS, decimal_places=2)
+    quantity: Money = Field(gt=Decimal("0"), max_digits=MAX_MONEY_DIGITS, decimal_places=3)
+    total: Money = Field(ge=Decimal("0"), max_digits=MAX_MONEY_DIGITS, decimal_places=2)
 
     @model_validator(mode="after")
     def _validate_line_total(self) -> Self:
@@ -78,18 +78,18 @@ class Bill(TimestampedDocument):
         min_length=1, description="An invoice must charge for at least one thing."
     )
 
-    subtotal: Decimal = Field(ge=Decimal("0"), max_digits=MAX_MONEY_DIGITS, decimal_places=2)
-    tax_amount: Decimal = Field(
+    subtotal: Money = Field(ge=Decimal("0"), max_digits=MAX_MONEY_DIGITS, decimal_places=2)
+    tax_amount: Money = Field(
         default=Decimal("0.00"), ge=Decimal("0"), max_digits=MAX_MONEY_DIGITS, decimal_places=2
     )
-    discount_amount: Decimal = Field(
+    discount_amount: Money = Field(
         default=Decimal("0.00"), ge=Decimal("0"), max_digits=MAX_MONEY_DIGITS, decimal_places=2
     )
-    grand_total: Decimal = Field(ge=Decimal("0"), max_digits=MAX_MONEY_DIGITS, decimal_places=2)
+    grand_total: Money = Field(ge=Decimal("0"), max_digits=MAX_MONEY_DIGITS, decimal_places=2)
 
     payment_status: PaymentStatus = Field(default=PaymentStatus.PENDING)
     payment_mode: PaymentMode | None = Field(default=None)
-    amount_paid: Decimal = Field(
+    amount_paid: Money = Field(
         default=Decimal("0.00"), ge=Decimal("0"), max_digits=MAX_MONEY_DIGITS, decimal_places=2
     )
     issued_at: datetime = Field(default_factory=utcnow)

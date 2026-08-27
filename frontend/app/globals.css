@@ -1,0 +1,147 @@
+@import "tailwindcss";
+
+/*
+ * Unified National Health Platform design tokens.
+ * See DESIGN.md for the reasoning behind every value here.
+ *
+ * muted-foreground is slate-600, not slate-400. Slate-400 on white is 2.8:1
+ * and fails WCAG AA. It is the most common contrast mistake in dashboard UI.
+ */
+
+:root {
+  --background: #f8fafc;
+  --surface: #ffffff;
+  --surface-muted: #f1f5f9;
+  --border: #e2e8f0;
+  --foreground: #0f172a;
+  --muted-foreground: #475569;
+  --primary: #0d9488;
+  --primary-foreground: #ffffff;
+  --primary-muted: #ccfbf1;
+  --ring: #0d9488;
+
+  --critical: #e11d48;
+  --critical-muted: #ffe4e6;
+  --warning: #d97706;
+  --warning-muted: #fef3c7;
+  --stable: #059669;
+  --stable-muted: #d1fae5;
+  --info: #0284c7;
+  --info-muted: #e0f2fe;
+  --neutral: #64748b;
+  --neutral-muted: #f1f5f9;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #020617;
+    --surface: #0f172a;
+    --surface-muted: #1e293b;
+    --border: #1e293b;
+    --foreground: #f1f5f9;
+    --muted-foreground: #94a3b8;
+    --primary: #2dd4bf;
+    --primary-foreground: #042f2e;
+    --primary-muted: #134e4a;
+    --ring: #2dd4bf;
+
+    --critical: #fb7185;
+    --critical-muted: #4c0519;
+    --warning: #fbbf24;
+    --warning-muted: #451a03;
+    --stable: #34d399;
+    --stable-muted: #022c22;
+    --info: #38bdf8;
+    --info-muted: #082f49;
+    --neutral: #94a3b8;
+    --neutral-muted: #1e293b;
+  }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-border: var(--border);
+  --color-foreground: var(--foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-muted: var(--primary-muted);
+  --color-ring: var(--ring);
+
+  --color-critical: var(--critical);
+  --color-critical-muted: var(--critical-muted);
+  --color-warning: var(--warning);
+  --color-warning-muted: var(--warning-muted);
+  --color-stable: var(--stable);
+  --color-stable-muted: var(--stable-muted);
+  --color-info: var(--info);
+  --color-info-muted: var(--info-muted);
+  --color-neutral: var(--neutral);
+  --color-neutral-muted: var(--neutral-muted);
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+* {
+  border-color: var(--border);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Focus is never suppressed. Every interactive element shows the same ring. */
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* The whole motion budget collapses for anyone who asked it to. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@keyframes skeleton-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+.skeleton {
+  background: var(--surface-muted);
+  animation: skeleton-pulse 1.6s ease-in-out infinite;
+}
+
+/* The printable receipt: drop the application chrome, keep the invoice. */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    background: #ffffff;
+    color: #000000;
+  }
+
+  .print-sheet {
+    border: none;
+    padding: 0;
+  }
+}

@@ -66,7 +66,12 @@ class MongoConnection:
         active = settings or get_settings()
         logger.info("Connecting to MongoDB database %s", active.mongo_db_name)
 
-        client: AsyncMongoClient[dict[str, Any]] = AsyncMongoClient(active.mongo_uri)
+        # tz_aware is not optional. BSON stores datetimes without a zone, so a
+        # naive client hands back naive values -- and every model validator that
+        # compares a stored timestamp against utcnow() (discharge before
+        # admission, incident not in the future) raises TypeError on the first
+        # document it reads back. Aware UTC in, aware UTC out.
+        client: AsyncMongoClient[dict[str, Any]] = AsyncMongoClient(active.mongo_uri, tz_aware=True)
         try:
             await init_beanie(
                 database=client[active.mongo_db_name],
