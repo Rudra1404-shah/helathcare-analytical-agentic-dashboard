@@ -8,6 +8,7 @@ registration list to keep in sync.
 from fastapi import APIRouter
 
 from src.api.v1 import (
+    analytics,
     auth,
     bills,
     cases,
@@ -39,6 +40,9 @@ api_router.include_router(cases.case_types_router)
 api_router.include_router(cases.cases_router)
 api_router.include_router(inventory.router)
 api_router.include_router(bills.router)
+
+# Analytical intelligence
+api_router.include_router(analytics.router)
 
 # Public grievance and citizen self-service
 api_router.include_router(complaints.router)

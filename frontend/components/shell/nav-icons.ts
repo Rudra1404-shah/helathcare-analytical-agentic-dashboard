@@ -1,6 +1,7 @@
 import {
   Activity,
   Bed,
+  BrainCircuit,
   Building,
   Building2,
   ClipboardList,
@@ -27,6 +28,7 @@ import {
  */
 export const NAV_ICONS = {
   activity: Activity,
+  analytics: BrainCircuit,
   bed: Bed,
   building: Building,
   building2: Building2,

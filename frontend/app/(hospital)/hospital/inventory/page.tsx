@@ -2,6 +2,10 @@ import { AlertTriangle, Package } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 
+import {
+  AddStockItemDialog,
+  StockActions,
+} from "@/app/(hospital)/hospital/inventory/inventory-dialogs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { FilterSelect } from "@/components/ui/field";
@@ -42,6 +46,7 @@ export default async function InventoryPage({
       <PageHeader
         title="Inventory"
         description="Beds, ventilators, oxygen, medicines, and consumables. Available stock moves automatically as cases are admitted and discharged, so a bed can never be occupied by a patient the register says is free."
+        action={<AddStockItemDialog hospitalId={hospital._id} />}
       />
 
       <Panel className="p-3">
@@ -162,6 +167,7 @@ async function StockTable({
               <TH numeric>Threshold</TH>
               <TH>Last restocked</TH>
               <TH>Expiry</TH>
+              <TH className="text-right">Actions</TH>
             </tr>
           </THead>
           <TBody>
@@ -194,6 +200,9 @@ async function StockTable({
                   <TD numeric>{quantity(item.min_safety_threshold)}</TD>
                   <TD>{item.last_restocked_at ? relative(item.last_restocked_at) : "Not recorded"}</TD>
                   <TD>{item.expires_on ? dateOnly(item.expires_on) : "Not applicable"}</TD>
+                  <TD className="text-right">
+                    <StockActions item={item} />
+                  </TD>
                 </TR>
               );
             })}

@@ -78,6 +78,58 @@ export type EvidenceType = "PHOTO" | "VIDEO";
 
 export type Gender = "MALE" | "FEMALE" | "OTHER" | "UNDISCLOSED";
 
+/**
+ * Clinical staff carry a registration number and can be put on call; admin and
+ * support staff cannot. The split decides which intake endpoint a role posts
+ * to, so the two lists are kept apart rather than filtered out of one.
+ */
+export type MedicalStaffRole =
+  | "STAFF_NURSE"
+  | "MATRON"
+  | "LAB_ASSISTANT"
+  | "WARD_BOY"
+  | "COMPOUNDER";
+
+export type AdminSupportStaffRole =
+  | "DESK_ADMIN"
+  | "ADMIN"
+  | "ACCOUNTANT"
+  | "CLEANER"
+  | "SECURITY"
+  | "DRIVER"
+  | "LIFTMAN"
+  | "HELPER";
+
+export type StaffRole = MedicalStaffRole | AdminSupportStaffRole;
+
+export type EmploymentType = "FULL_TIME" | "VISITING" | "ON_CALL";
+
+export type DiseaseCategory =
+  | "INFECTIOUS"
+  | "CHRONIC"
+  | "TRAUMA"
+  | "SURGICAL"
+  | "PEDIATRIC"
+  | "MATERNAL";
+
+export type InventoryUnit =
+  | "UNITS"
+  | "LITERS"
+  | "PIECES"
+  | "BOXES"
+  | "VIALS"
+  | "STRIPS"
+  | "KG"
+  | "ML";
+
+export type PaymentMode =
+  | "CASH"
+  | "CARD"
+  | "UPI"
+  | "NET_BANKING"
+  | "INSURANCE"
+  | "GOVT_SCHEME";
+
 // --------------------------------------------------------------------------
 // Envelope
 // --------------------------------------------------------------------------
@@ -417,5 +469,253 @@ export interface HealthRecord {
   pre_existing_conditions: string[];
   linked_patient_ids: string[];
   cases: PhrCaseEntry[];
+  generated_at: string;
+}
+
+// ---------------------------------------------------------------------------
+// Analytical intelligence (Phase 4)
+//
+// Mirrors src/domain/schemas/analytics.py. Ratios and rates are `number | null`
+// rather than defaulting to zero, because the backend distinguishes "undefined
+// here" from "genuinely zero" and a view that collapses the two would show an
+// empty ICU where there is in fact no ICU.
+// ---------------------------------------------------------------------------
+
+export type AlertTier = "CRITICAL" | "HIGH" | "MEDIUM" | "INFO";
+
+export type AlertKind =
+  | "BED_CAPACITY"
+  | "ICU_CAPACITY"
+  | "STOCK_DEPLETION"
+  | "OUTBREAK_ANOMALY"
+  | "WORKFORCE_OVERLOAD"
+  | "SURGE_FORECAST";
+
+export type TrendDirection = "RISING" | "FALLING" | "STABLE";
+
+export type SignalConfidence = "HIGH" | "MODERATE" | "LOW" | "INSUFFICIENT_DATA";
+
+export type EstimationBasis = "ESTIMATED_FROM_CASE_DEMAND" | "INSUFFICIENT_HISTORY";
+
+export interface TriageBreakdownEntry {
+  triage_level: TriageLevel;
+  open_cases: number;
+}
+
+export interface RealtimeMonitoring {
+  hospital_id: string | null;
+  hospital_count: number;
+  open_cases: number;
+  admitted_cases: number;
+  icu_cases: number;
+  observation_cases: number;
+  total_sanctioned_beds: number;
+  icu_beds: number;
+  bed_occupancy_ratio: number | null;
+  icu_occupancy_ratio: number | null;
+  ventilator_utilisation_ratio: number | null;
+  oxygen_utilisation_ratio: number | null;
+  triage_breakdown: TriageBreakdownEntry[];
+  unclassified_cases: number;
+  generated_at: string;
+}
+
+export interface OutbreakSignal {
+  zone_code: string;
+  zone_name: string;
+  state: string;
+  city: string;
+  case_type_id: string | null;
+  case_type_name: string;
+  icd10_code: string;
+  population_covered: number;
+  observed_cases: number;
+  observed_rate_per_100k: number | null;
+  baseline_mean_rate_per_100k: number | null;
+  z_score: number | null;
+  is_anomaly: boolean;
+  confidence: SignalConfidence;
+  baseline_days: number;
+}
+
+export interface OutbreakDetection {
+  signals: OutbreakSignal[];
+  anomaly_count: number;
+  evaluated_count: number;
+  window_days: number;
+  threshold: number;
+  generated_at: string;
+}
+
+export interface ForecastPoint {
+  horizon_day: number;
+  forecast_date: string;
+  predicted_admissions: number;
+  lower_bound: number;
+  upper_bound: number;
+}
+
+export interface SurgeForecast {
+  hospital_id: string | null;
+  history: number[];
+  history_window_days: number;
+  observations: number;
+  points: ForecastPoint[];
+  horizon_days: number;
+  trend_direction: TrendDirection;
+  trend_per_day: number;
+  confidence: SignalConfidence;
+  projected_7_day_total: number;
+  projected_14_day_total: number;
+  generated_at: string;
+}
+
+export interface DoctorLoad {
+  doctor_id: string;
+  full_name: string;
+  specialization: string;
+  department_id: string;
+  is_available: boolean;
+  active_load: number;
+  max_daily_patients: number;
+  burnout_index: number | null;
+  is_overloaded: boolean;
+}
+
+export interface DepartmentLoad {
+  department_id: string;
+  doctor_count: number;
+  active_load: number;
+  daily_capacity: number;
+  burnout_index: number | null;
+}
+
+export interface ShiftBalance {
+  shift: ShiftType;
+  doctor_count: number;
+  medical_staff_count: number;
+  support_staff_count: number;
+}
+
+export interface ReallocationSuggestion {
+  from_department_id: string;
+  to_department_id: string;
+  from_burnout_index: number;
+  to_burnout_index: number;
+  reason: string;
+}
+
+export interface WorkforceReallocation {
+  hospital_id: string | null;
+  has_capacity_data: boolean;
+  doctor_count: number;
+  active_doctor_count: number;
+  total_active_load: number;
+  total_daily_capacity: number;
+  mean_burnout_index: number | null;
+  overloaded_doctor_count: number;
+  doctors: DoctorLoad[];
+  departments: DepartmentLoad[];
+  shift_balance: ShiftBalance[];
+  suggestions: ReallocationSuggestion[];
+  generated_at: string;
+}
+
+export interface ResourceProjection {
+  hospital_id: string;
+  category: InventoryCategory;
+  line_count: number;
+  total_stock: number;
+  available_stock: number;
+  min_safety_threshold: number;
+  unit: InventoryUnit | null;
+  daily_burn_rate: number;
+  days_to_stockout: number | null;
+  projected_stockout_on: string | null;
+  is_below_threshold: boolean;
+  basis: EstimationBasis;
+  window_days: number;
+}
+
+export interface ResourcePrediction {
+  projections: ResourceProjection[];
+  at_risk_count: number;
+  window_days: number;
+  basis: EstimationBasis;
+  generated_at: string;
+}
+
+export interface SmartAlert {
+  tier: AlertTier;
+  kind: AlertKind;
+  hospital_id: string | null;
+  title: string;
+  detail: string;
+  metric_value: number | null;
+  threshold_value: number | null;
+  recommended_action: string;
+}
+
+export interface SmartAlerts {
+  alerts: SmartAlert[];
+  critical_count: number;
+  high_count: number;
+  medium_count: number;
+  info_count: number;
+  generated_at: string;
+}
+
+export interface CategoryCount {
+  category: ComplaintCategory;
+  count: number;
+}
+
+export interface StatusCount {
+  status: InvestigationStatus;
+  count: number;
+}
+
+export interface ActionCount {
+  action: ActionTaken;
+  count: number;
+}
+
+export interface RecidivismEntry {
+  hospital_id: string;
+  category: ComplaintCategory;
+  action_taken: ActionTaken;
+  complaints_before_action: number;
+  complaints_after_action: number;
+}
+
+export interface PolicyImpact {
+  hospital_id: string | null;
+  total_complaints: number;
+  closed_complaints: number;
+  open_complaints: number;
+  by_category: CategoryCount[];
+  by_status: StatusCount[];
+  by_action: ActionCount[];
+  mean_resolution_days: number | null;
+  median_resolution_days: number | null;
+  enforcement_rate: number | null;
+  repeat_offender_count: number;
+  recidivism: RecidivismEntry[];
+  generated_at: string;
+}
+
+export interface NationalOverview {
+  hospital_count: number;
+  zone_count: number;
+  population_covered: number;
+  open_cases: number;
+  total_sanctioned_beds: number;
+  bed_occupancy_ratio: number | null;
+  icu_occupancy_ratio: number | null;
+  critical_alert_count: number;
+  high_alert_count: number;
+  outbreak_signal_count: number;
+  at_risk_resource_count: number;
+  open_complaint_count: number;
   generated_at: string;
 }

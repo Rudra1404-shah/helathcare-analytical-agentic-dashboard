@@ -145,3 +145,65 @@ body {
     padding: 0;
   }
 }
+
+/*
+ * Dialog and toast motion.
+ *
+ * The whole budget is the enter transition: a fade for the scrim, a fade plus
+ * a two-percent scale for the panel. No spring, no bounce, nothing above
+ * 150ms. Clinical software that springs is clinical software people distrust,
+ * and this runs at MOTION_INTENSITY 2. See DESIGN.md section 7.
+ *
+ * The reduced-motion block above collapses all of it to nothing.
+ */
+
+@keyframes dialog-overlay-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes dialog-panel-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(0.75rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.dialog-overlay[data-state="open"] {
+  animation: dialog-overlay-in 120ms ease-out;
+}
+
+.dialog-panel[data-state="open"] {
+  animation: dialog-panel-in 140ms ease-out;
+}
+
+.toast-root[data-state="open"] {
+  animation: toast-in 140ms ease-out;
+}
+
+.toast-root[data-swipe="move"] {
+  transform: translateX(var(--radix-toast-swipe-move-x));
+}
+
+.toast-root[data-swipe="end"] {
+  animation: toast-in 140ms ease-out reverse;
+}

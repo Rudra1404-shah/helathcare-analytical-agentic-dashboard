@@ -1,7 +1,8 @@
-import { Activity, HeartPulse } from "lucide-react";
+import { Activity, HeartPulse, Plus } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 
+import { AdmitCaseDialog, CaseActions } from "@/app/(hospital)/hospital/cases/case-dialogs";
 import { CaseStatusBadge, TriageBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { FilterSelect } from "@/components/ui/field";
@@ -12,7 +13,17 @@ import { apiTry } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { dateTime, humanise, stayDuration } from "@/lib/format";
 import { withHospital } from "@/lib/hospital-page";
-import type { CaseStatus, Paginated, Patient, PatientCase, VitalSigns } from "@/lib/types";
+import type {
+  CaseStatus,
+  CaseType,
+  Department,
+  Doctor,
+  Hospital,
+  Paginated,
+  Patient,
+  PatientCase,
+  VitalSigns,
+} from "@/lib/types";
 
 export const metadata: Metadata = { title: "Cases and triage" };
 
@@ -42,6 +53,18 @@ export default async function CasesPage({
       <PageHeader
         title="Cases and triage"
         description="Open encounters grouped by clinical urgency. Cases with no triage assigned are surfaced rather than hidden, because an unclassified patient is exactly the one a charge nurse needs to see."
+        action={
+          <Suspense
+            fallback={
+              <Button size="sm" disabled>
+                <Plus strokeWidth={1.75} aria-hidden="true" />
+                Admit patient
+              </Button>
+            }
+          >
+            <AdmitAction hospital={hospital} />
+          </Suspense>
+        }
       />
 
       <Panel className="p-3">
@@ -89,6 +112,41 @@ export default async function CasesPage({
       </div>
     </>
   ));
+}
+
+/**
+ * The admit dialog needs four lists to populate its selectors. They are loaded
+ * here rather than inside the dialog so it opens ready to use, and so a slow
+ * directory never blocks the triage board behind it.
+ */
+async function AdmitAction({ hospital }: { hospital: Hospital }) {
+  const [patients, doctors, departments, caseTypes, existing] = await Promise.all([
+    apiTry<Paginated<Patient>>(`/hospitals/${hospital._id}/patients`, {
+      query: { limit: 200 },
+    }),
+    apiTry<Paginated<Doctor>>(`/hospitals/${hospital._id}/doctors`, { query: { limit: 200 } }),
+    apiTry<Paginated<Department>>(`/hospitals/${hospital._id}/departments`, {
+      query: { limit: 100 },
+    }),
+    apiTry<Paginated<CaseType>>("/case-types", { query: { limit: 200 } }),
+    apiTry<Paginated<PatientCase>>(`/hospitals/${hospital._id}/cases`, { query: { limit: 1 } }),
+  ]);
+
+  // A suggestion, not a guarantee. The API owns uniqueness and will say so if
+  // two desks land on the same number at once.
+  const sequence = existing.ok ? existing.data.meta.total + 1 : 1;
+  const suggested = `${hospital.license_no.slice(-5)}-C${String(sequence).padStart(4, "0")}`;
+
+  return (
+    <AdmitCaseDialog
+      hospitalId={hospital._id}
+      suggestedCaseNumber={suggested}
+      patients={patients.ok ? patients.data.items : []}
+      doctors={doctors.ok ? doctors.data.items : []}
+      departments={departments.ok ? departments.data.items : []}
+      caseTypes={caseTypes.ok ? caseTypes.data.items : []}
+    />
+  );
 }
 
 const COLUMN_ORDER = ["IMMEDIATE", "URGENT", "STANDARD", "NON_URGENT", "UNTRIAGED"];
@@ -166,6 +224,15 @@ async function TriageBoard({ hospitalId }: { hospitalId: string }) {
                   </span>
                 </p>
                 <LatestVitals vitals={item.vitals} />
+                <div className="mt-2 border-t border-border pt-2">
+                  <CaseActions
+                    caseId={item._id}
+                    caseNumber={item.case_number}
+                    status={item.status}
+                    bed={item.bed_allocated}
+                    compact
+                  />
+                </div>
               </li>
             ))}
           </ul>
@@ -283,6 +350,7 @@ async function CaseRegister({
               <TH>Status</TH>
               <TH>Admitted</TH>
               <TH numeric>Stay</TH>
+              <TH className="text-right">Actions</TH>
             </tr>
           </THead>
           <TBody>
@@ -304,6 +372,14 @@ async function CaseRegister({
                 </TD>
                 <TD>{dateTime(item.admitted_at)}</TD>
                 <TD numeric>{stayDuration(item.admitted_at, item.discharged_at)}</TD>
+                <TD className="text-right">
+                  <CaseActions
+                    caseId={item._id}
+                    caseNumber={item.case_number}
+                    status={item.status}
+                    bed={item.bed_allocated}
+                  />
+                </TD>
               </TR>
             ))}
           </TBody>

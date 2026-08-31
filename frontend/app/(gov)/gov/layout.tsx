@@ -3,6 +3,12 @@ import { requireSession } from "@/lib/session";
 
 const SECTIONS: NavSection[] = [
   {
+    heading: "Intelligence",
+    items: [
+      { href: "/gov/analytics", label: "AI Intelligence Hub", icon: "analytics" },
+    ],
+  },
+  {
     heading: "Oversight",
     items: [
       { href: "/gov/hospitals", label: "Hospital directory", icon: "building2" },

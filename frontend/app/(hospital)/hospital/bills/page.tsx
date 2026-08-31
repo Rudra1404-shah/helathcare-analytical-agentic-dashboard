@@ -3,6 +3,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 
+import {
+  CreateInvoiceDialog,
+  RecordPaymentDialog,
+} from "@/app/(hospital)/hospital/bills/bill-dialogs";
 import { PaymentBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { FilterSelect } from "@/components/ui/field";
@@ -12,7 +16,14 @@ import { Table, TBody, TD, TDMeta, TDPrimary, TH, THead, TR, TableWrap } from "@
 import { apiTry } from "@/lib/api";
 import { dateOnly, money } from "@/lib/format";
 import { withHospital } from "@/lib/hospital-page";
-import type { Bill, Paginated, Patient, PaymentStatus } from "@/lib/types";
+import type {
+  Bill,
+  Hospital,
+  Paginated,
+  Patient,
+  PatientCase,
+  PaymentStatus,
+} from "@/lib/types";
 
 export const metadata: Metadata = { title: "Billing" };
 
@@ -36,6 +47,13 @@ export default async function BillsPage({
       <PageHeader
         title="Billing"
         description="Itemised invoices raised against closed cases. Line totals, subtotal, and grand total are all computed server-side from rates and quantities, so an overcharging complaint can never be a rounding bug in disguise."
+        action={
+          <Suspense
+            fallback={<div className="skeleton h-8 w-32 rounded-md" />}
+          >
+            <RaiseInvoiceAction hospital={hospital} />
+          </Suspense>
+        }
       />
 
       <Panel className="p-3">
@@ -73,6 +91,42 @@ export default async function BillsPage({
       </Panel>
     </>
   ));
+}
+
+/**
+ * The invoice composer needs the cases it can bill and the names behind them.
+ * Both are loaded here so the dialog opens ready to use.
+ */
+async function RaiseInvoiceAction({ hospital }: { hospital: Hospital }) {
+  const [cases, patients, existing] = await Promise.all([
+    apiTry<Paginated<PatientCase>>(`/hospitals/${hospital._id}/cases`, {
+      query: { limit: 200 },
+    }),
+    apiTry<Paginated<Patient>>(`/hospitals/${hospital._id}/patients`, {
+      query: { limit: 200 },
+    }),
+    apiTry<Paginated<Bill>>(`/hospitals/${hospital._id}/bills`, { query: { limit: 1 } }),
+  ]);
+
+  const patientNames: Record<string, string> = {};
+  if (patients.ok) {
+    for (const patient of patients.data.items) {
+      patientNames[patient._id] = patient.full_name;
+    }
+  }
+
+  // A suggestion only. The API owns uniqueness and says so if two desks collide.
+  const sequence = existing.ok ? existing.data.meta.total + 1 : 1;
+  const suggested = `${hospital.license_no.slice(-5)}-INV${String(sequence).padStart(4, "0")}`;
+
+  return (
+    <CreateInvoiceDialog
+      hospitalId={hospital._id}
+      suggestedInvoiceNo={suggested}
+      cases={cases.ok ? cases.data.items : []}
+      patientNames={patientNames}
+    />
+  );
 }
 
 async function BillsTable({
@@ -132,7 +186,7 @@ async function BillsTable({
               <TH numeric>Grand total</TH>
               <TH numeric>Paid</TH>
               <TH>Status</TH>
-              <TH className="text-right">Receipt</TH>
+              <TH className="text-right">Actions</TH>
             </tr>
           </THead>
           <TBody>
@@ -150,9 +204,12 @@ async function BillsTable({
                   <PaymentBadge status={bill.payment_status} />
                 </TD>
                 <TD className="text-right">
-                  <Button asChild variant="ghost" size="sm">
-                    <Link href={`/hospital/bills/${bill._id}`}>View</Link>
-                  </Button>
+                  <div className="flex items-center justify-end gap-1">
+                    <RecordPaymentDialog bill={bill} />
+                    <Button asChild variant="ghost" size="sm">
+                      <Link href={`/hospital/bills/${bill._id}`}>View</Link>
+                    </Button>
+                  </div>
                 </TD>
               </TR>
             ))}

@@ -15,11 +15,14 @@ __all__ = [
     "TERMINAL_CASE_STATUSES",
     "AccreditationStatus",
     "ActionTaken",
+    "AlertKind",
+    "AlertTier",
     "BloodGroup",
     "CaseStatus",
     "ComplaintCategory",
     "DiseaseCategory",
     "EmploymentType",
+    "EstimationBasis",
     "EvidenceType",
     "Gender",
     "InventoryCategory",
@@ -29,9 +32,11 @@ __all__ = [
     "PaymentStatus",
     "SectorType",
     "ShiftType",
+    "SignalConfidence",
     "StaffCategory",
     "StaffRole",
     "StaffStatus",
+    "TrendDirection",
     "TriageLevel",
     "UserRole",
 ]
@@ -308,3 +313,66 @@ class EvidenceType(StrEnum):
 
     PHOTO = "PHOTO"
     VIDEO = "VIDEO"
+
+
+# --------------------------------------------------------------------------- #
+# Analytical intelligence
+# --------------------------------------------------------------------------- #
+class AlertTier(StrEnum):
+    """Severity band of a Smart Alert.
+
+    Four tiers rather than a numeric score because an operations desk acts on a
+    tier, not on a decimal: CRITICAL is "now", HIGH is "today", MEDIUM is "this
+    week", INFO is "worth knowing".
+    """
+
+    CRITICAL = "CRITICAL"
+    HIGH = "HIGH"
+    MEDIUM = "MEDIUM"
+    INFO = "INFO"
+
+
+class AlertKind(StrEnum):
+    """What an alert is about, so a client can route or group it."""
+
+    BED_CAPACITY = "BED_CAPACITY"
+    ICU_CAPACITY = "ICU_CAPACITY"
+    STOCK_DEPLETION = "STOCK_DEPLETION"
+    OUTBREAK_ANOMALY = "OUTBREAK_ANOMALY"
+    WORKFORCE_OVERLOAD = "WORKFORCE_OVERLOAD"
+    SURGE_FORECAST = "SURGE_FORECAST"
+
+
+class TrendDirection(StrEnum):
+    """Which way a fitted time series is moving."""
+
+    RISING = "RISING"
+    FALLING = "FALLING"
+    STABLE = "STABLE"
+
+
+class SignalConfidence(StrEnum):
+    """How much weight an analytical output can carry.
+
+    ``INSUFFICIENT_DATA`` is not an error. A hospital that opened last week has
+    no baseline to compare against, and saying so plainly is more useful than a
+    confident number derived from four data points.
+    """
+
+    HIGH = "HIGH"
+    MODERATE = "MODERATE"
+    LOW = "LOW"
+    INSUFFICIENT_DATA = "INSUFFICIENT_DATA"
+
+
+class EstimationBasis(StrEnum):
+    """Where a derived figure came from.
+
+    The platform stores current stock levels but no stock-movement ledger, so a
+    consumption rate is inferred from case activity rather than measured. Every
+    response that carries an inferred number carries this alongside it: an
+    estimate presented as a measurement is how a dashboard loses its credibility.
+    """
+
+    ESTIMATED_FROM_CASE_DEMAND = "ESTIMATED_FROM_CASE_DEMAND"
+    INSUFFICIENT_HISTORY = "INSUFFICIENT_HISTORY"

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
+import { ToastProvider } from "@/components/ui/toast";
+
 import "./globals.css";
 
 /*
@@ -41,7 +43,7 @@ export default function RootLayout({
         >
           Skip to content
         </a>
-        {children}
+        <ToastProvider>{children}</ToastProvider>
       </body>
     </html>
   );

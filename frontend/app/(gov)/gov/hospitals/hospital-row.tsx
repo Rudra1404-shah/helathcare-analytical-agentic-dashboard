@@ -1,14 +1,15 @@
 "use client";
 
-import * as Dialog from "@radix-ui/react-dialog";
-import { Loader2, ShieldCheck } from "lucide-react";
-import { useState, useTransition } from "react";
+import { ShieldCheck } from "lucide-react";
+import { useState } from "react";
 
 import { updateAccreditation } from "@/app/(gov)/gov/actions";
 import { AccreditationBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { FormDialog } from "@/components/ui/dialog";
 import { Field, Select, Textarea } from "@/components/ui/field";
 import { TD, TDMeta, TDPrimary, TR } from "@/components/ui/table";
+import { useToast } from "@/components/ui/toast";
 import type { AccreditationStatus, Hospital } from "@/lib/types";
 
 const OPTIONS: { value: AccreditationStatus; label: string; consequence: string }[] = [
@@ -62,129 +63,73 @@ export function HospitalRow({ hospital }: { hospital: Hospital }) {
 }
 
 function AccreditationDialog({ hospital }: { hospital: Hospital }) {
-  const [open, setOpen] = useState(false);
   const [status, setStatus] = useState<AccreditationStatus>(hospital.accreditation_status);
-  const [error, setError] = useState<string | null>(null);
-  const [pending, startTransition] = useTransition();
-
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError(null);
-    const formData = new FormData(event.currentTarget);
-
-    startTransition(async () => {
-      const result = await updateAccreditation(hospital._id, formData);
-      if (result.ok) {
-        setOpen(false);
-      } else {
-        setError(result.error ?? "The change could not be saved.");
-      }
-    });
-  }
+  const { confirm } = useToast();
 
   const chosen = OPTIONS.find((option) => option.value === status);
   const blacklisting = status === "BLACKLISTED";
 
   return (
-    <Dialog.Root open={open} onOpenChange={setOpen}>
-      <Dialog.Trigger asChild>
+    <FormDialog
+      trigger={
         <Button variant="ghost" size="sm">
           <ShieldCheck strokeWidth={1.75} aria-hidden="true" />
           Change
         </Button>
-      </Dialog.Trigger>
-
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-40 bg-slate-950/40" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-[min(32rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 rounded-lg border border-border bg-surface p-5 shadow-lg">
-          <Dialog.Title className="text-sm font-semibold text-foreground">
-            Accreditation decision
-          </Dialog.Title>
-          <Dialog.Description className="mt-1 text-sm text-muted-foreground">
-            {hospital.name} · {hospital.license_no}
-          </Dialog.Description>
-
-          <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-4">
-            <Field label="Accreditation status" htmlFor="accreditation_status" required>
-              <Select
-                id="accreditation_status"
-                name="accreditation_status"
-                value={status}
-                onChange={(event) =>
-                  setStatus(event.target.value as AccreditationStatus)
-                }
-                disabled={pending}
-              >
-                {OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-
-            {chosen ? (
-              <p
-                className={
-                  blacklisting
-                    ? "rounded-md bg-critical-muted px-3 py-2 text-sm text-critical"
-                    : "text-sm text-muted-foreground"
-                }
-              >
-                {chosen.consequence}
-              </p>
-            ) : null}
-
-            <Field
-              label="Closure remarks"
-              htmlFor="remarks"
-              hint="Recorded against your account in the audit trail."
-              required
+      }
+      title="Accreditation decision"
+      description={`${hospital.name} · ${hospital.license_no}`}
+      submitLabel={blacklisting ? "Blacklist hospital" : "Save decision"}
+      submitVariant={blacklisting ? "destructive" : "primary"}
+      action={(formData) => updateAccreditation(hospital._id, formData)}
+      onSuccess={() => confirm(`Accreditation updated for ${hospital.name}.`)}
+    >
+      {({ pending }) => (
+        <>
+          <Field label="Accreditation status" htmlFor="accreditation_status" required>
+            <Select
+              id="accreditation_status"
+              name="accreditation_status"
+              value={status}
+              onChange={(event) => setStatus(event.target.value as AccreditationStatus)}
+              disabled={pending}
             >
-              <Textarea
-                id="remarks"
-                name="remarks"
-                required
-                disabled={pending}
-                placeholder="Repeated hygiene violations confirmed on inspection of 14 August."
-              />
-            </Field>
+              {OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </Select>
+          </Field>
 
-            {error ? (
-              <p
-                role="alert"
-                className="rounded-md bg-critical-muted px-3 py-2 text-sm text-critical"
-              >
-                {error}
-              </p>
-            ) : null}
+          {chosen ? (
+            <p
+              className={
+                blacklisting
+                  ? "rounded-md bg-critical-muted px-3 py-2 text-sm text-critical"
+                  : "text-sm text-muted-foreground"
+              }
+            >
+              {chosen.consequence}
+            </p>
+          ) : null}
 
-            <div className="flex justify-end gap-2">
-              <Dialog.Close asChild>
-                <Button type="button" variant="secondary" disabled={pending}>
-                  Cancel
-                </Button>
-              </Dialog.Close>
-              <Button
-                type="submit"
-                variant={blacklisting ? "destructive" : "primary"}
-                disabled={pending}
-              >
-                {pending ? (
-                  <>
-                    <Loader2 className="animate-spin" strokeWidth={1.75} aria-hidden="true" />
-                    Saving
-                  </>
-                ) : blacklisting ? (
-                  "Blacklist hospital"
-                ) : (
-                  "Save decision"
-                )}
-              </Button>
-            </div>
-          </form>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+          <Field
+            label="Closure remarks"
+            htmlFor="remarks"
+            hint="Recorded against your account in the audit trail."
+            required
+          >
+            <Textarea
+              id="remarks"
+              name="remarks"
+              required
+              disabled={pending}
+              placeholder="Repeated hygiene violations confirmed on inspection of 14 August."
+            />
+          </Field>
+        </>
+      )}
+    </FormDialog>
   );
 }

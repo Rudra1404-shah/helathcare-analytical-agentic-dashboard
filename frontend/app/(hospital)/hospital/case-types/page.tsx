@@ -8,6 +8,7 @@ import { EmptyState, ErrorState, TableSkeleton } from "@/components/ui/states";
 import { Table, TBody, TD, TDMeta, TDPrimary, TH, THead, TR, TableWrap } from "@/components/ui/table";
 import { apiTry } from "@/lib/api";
 import { humanise } from "@/lib/format";
+import { CreateCaseTypeDialog } from "@/app/(hospital)/hospital/case-types/case-type-dialog";
 import { withHospital } from "@/lib/hospital-page";
 import type { CaseType, Paginated } from "@/lib/types";
 
@@ -19,6 +20,7 @@ export default async function CaseTypesPage() {
       <PageHeader
         title="Case types"
         description="ICD-10 coded conditions with a triage rating. National standards are shared across every hospital; a local definition is scoped to this one. A notifiable type is watched by the outbreak-detection module for anomalous clustering."
+        action={<CreateCaseTypeDialog />}
       />
       <Panel>
         <Suspense

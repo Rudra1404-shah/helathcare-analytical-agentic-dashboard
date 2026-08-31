@@ -2,6 +2,7 @@ import { ArrowLeft } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { RecordPaymentDialog } from "@/app/(hospital)/hospital/bills/bill-dialogs";
 import { PrintButton } from "@/app/(hospital)/hospital/bills/[billId]/print-button";
 import { PaymentBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -52,7 +53,10 @@ export default async function ReceiptPage({
             Billing
           </Link>
         </Button>
-        <PrintButton />
+        <div className="flex items-center gap-1">
+          <RecordPaymentDialog bill={bill} />
+          <PrintButton />
+        </div>
       </div>
 
       <Panel className="print-sheet mx-auto max-w-3xl p-8">

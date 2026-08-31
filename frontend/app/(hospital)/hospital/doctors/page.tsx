@@ -10,6 +10,7 @@ import { EmptyState, ErrorState, TableSkeleton } from "@/components/ui/states";
 import { Table, TBody, TD, TDMeta, TDPrimary, TH, THead, TR, TableWrap } from "@/components/ui/table";
 import { apiTry } from "@/lib/api";
 import { humanise } from "@/lib/format";
+import { DoctorIntakeTrigger } from "@/components/data/workforce-triggers";
 import { withHospital } from "@/lib/hospital-page";
 import type { Department, Doctor, Paginated, ShiftType } from "@/lib/types";
 
@@ -29,6 +30,11 @@ export default async function DoctorsPage({
       <PageHeader
         title="Doctors"
         description="Onboarded physicians, their specialisations, and the daily patient cap each one carries. That cap is what the workforce-reallocation module reads when deciding whether a department is over-subscribed."
+        action={
+          <Suspense fallback={<div className="skeleton h-8 w-40 rounded-md" />}>
+            <DoctorIntakeTrigger hospitalId={hospital._id} />
+          </Suspense>
+        }
       />
 
       <Suspense fallback={<div className="skeleton h-14 rounded-lg" />}>

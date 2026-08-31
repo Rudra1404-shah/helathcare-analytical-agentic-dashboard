@@ -7,6 +7,7 @@ import { PageHeader, Panel, PanelHeader } from "@/components/ui/panel";
 import { EmptyState, ErrorState, TableSkeleton } from "@/components/ui/states";
 import { Table, TBody, TD, TDMeta, TDPrimary, TH, THead, TR, TableWrap } from "@/components/ui/table";
 import { apiTry } from "@/lib/api";
+import { DepartmentCreateTrigger } from "@/components/data/workforce-triggers";
 import { withHospital } from "@/lib/hospital-page";
 import type { Department, Doctor, Paginated } from "@/lib/types";
 
@@ -18,6 +19,11 @@ export default async function DepartmentsPage() {
       <PageHeader
         title="Departments"
         description="The clinical unit registry. Department codes are unique within this hospital, not across the platform, so two hospitals may both run a unit coded CARD."
+        action={
+          <Suspense fallback={<div className="skeleton h-8 w-40 rounded-md" />}>
+            <DepartmentCreateTrigger hospitalId={hospital._id} />
+          </Suspense>
+        }
       />
       <Panel>
         <Suspense

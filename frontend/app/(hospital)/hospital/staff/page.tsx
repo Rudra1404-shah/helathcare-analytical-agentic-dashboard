@@ -10,6 +10,7 @@ import { EmptyState, ErrorState, TableSkeleton } from "@/components/ui/states";
 import { Table, TBody, TD, TDMeta, TDPrimary, TH, THead, TR, TableWrap } from "@/components/ui/table";
 import { apiTry } from "@/lib/api";
 import { humanise } from "@/lib/format";
+import { StaffIntakeTrigger } from "@/components/data/workforce-triggers";
 import { withHospital } from "@/lib/hospital-page";
 import type { Paginated, ShiftType, Staff, StaffCategory } from "@/lib/types";
 
@@ -36,6 +37,11 @@ export default async function StaffPage({
       <PageHeader
         title="Staff roster"
         description="Admin, support, and medical staff. Both intake forms resolve to one register, discriminated by category, so clinical headcount can never be inflated by a support role filed on the wrong form."
+        action={
+          <Suspense fallback={<div className="skeleton h-8 w-40 rounded-md" />}>
+            <StaffIntakeTrigger hospitalId={hospital._id} />
+          </Suspense>
+        }
       />
 
       <Panel className="p-3">

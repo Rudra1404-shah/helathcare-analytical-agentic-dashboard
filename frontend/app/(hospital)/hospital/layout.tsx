@@ -11,6 +11,7 @@ const SECTIONS: NavSection[] = [
     heading: "Capacity",
     items: [
       { href: "/hospital", label: "Live overview", icon: "dashboard", exact: true },
+      { href: "/hospital/analytics", label: "AI Intelligence Hub", icon: "analytics" },
       { href: "/hospital/inventory", label: "Inventory", icon: "inventory" },
       { href: "/hospital/profile", label: "Profile and beds", icon: "building" },
     ],
